@@ -23,7 +23,8 @@
 		<h1>Barcoder</h1>
 		<p>
 			Lookup ISRC and UPC barcodes for albums and tracks.
-			Paste a Deezer <span id=spotifyMention>or Spotify</span> album/track link to get release codes and a copyable tracklist.
+			Paste a album/track link to get release codes and a copyable tracklist.
+			Supported platforms: Deezer (works out of the box), Spotify — needs access keys: <a href=# id=spotify-keys-link>click to <span id=spotify-keys-action>add</span></a>.
 		</p>
 		<form id=lookup-form>
 			<input
@@ -68,6 +69,31 @@
 		<form method=dialog>
 			<button type=submit>Close</button>
 		</form>
+	</dialog>
+	<dialog id=spotify-keys-dialog>
+		<h2>Spotify API keys</h2>
+		<p class=dialog-lead>
+			Create an app in the
+			<a href=https://developer.spotify.com target=_blank rel=noopener>Spotify Developer Dashboard</a> — log in with your normal listener account,
+			then paste the <strong>Client ID</strong> and <strong>Client Secret</strong> below.
+			Keys stay in your browser only, never sent to any servers.
+		</p>
+		<form id=spotify-keys-form>
+			<label>
+				Client ID
+				<input id=spotify-client-id type=text autocomplete=off spellcheck=false required>
+			</label>
+			<label>
+				Client Secret
+				<input id=spotify-client-secret type=password autocomplete=off spellcheck=false required>
+			</label>
+			<button type=submit>Add</button>
+		</form>
+		<section id=spotify-keys-history class=keys-history hidden>
+			<h3>Stored keys</h3>
+			<ul id=spotify-keys-list></ul>
+		</section>
+		<button type=button id=spotify-keys-close>Close</button>
 	</dialog>
 	<footer>
 		<a href=https://wrongwave.net target=_blank>← Wrong Wave</a>

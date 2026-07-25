@@ -1,17 +1,18 @@
 # Barcoder
 
-Lookup **ISRC** and **UPC** barcodes for Spotify and Deezer albums and tracks. Note that Spotify quotas are inhumanly tiny and it's not per app but per developer account. Deezer requires no API key and is quite generous with quotas.
+Lookup **ISRC** and **UPC** barcodes for Deezer and Spotify albums and tracks. Note that Spotify quotas are inhumanly restrictive and there's no way to get more *‘if you're not an organisation with 250K+ users’*. Deezer requires no API key and is quite generous with request quotas.
 
 **Live:** [https://barcoder.wrongwave.net](https://barcoder.wrongwave.net)
 
 Paste an album or track URL to get release metadata, a tracklist with ISRCs, and a copyable text summary. Links are shareable via `?url=`.
 
-Spotify needs credentials in `config.js`. Deezer works without a key (JSONP).
+**Deezer** works right away without a key (JSONP).
+
+**Spotify** needs a `Client ID` and `Client Secret` from the [Spotify Developer Dashboard](https://developer.spotify.com) — add them in the 'Spotify keys' dialog. Keys stay in the browser (`localStorage`), never leave the machine, and override defaults from `config.js`. Old keys are kept with a per-key request count so you can switch or remove them later. 10-track album is 10 track requests, 1 album request and 1 token request — 12 requests in total. Spotify quotas are per developer account, not per app.
 
 ## Local setup
 
-1. [Optional] Create a [Spotify Developer](https://developer.spotify.com/dashboard) app and copy the Client ID and Client Secret — needed only if you want to support Spotify links.
-2. Copy the config example and fill in your credentials:
+1. [Optional] Create a Spotify Developer app if you want Spotify lookups. You can enter the keys in the UI, or put a site-wide fallback in `config.js`:
 
 ```bash
 cp config.example.js config.js
@@ -24,7 +25,7 @@ window.BARCODER = {
 }
 ```
 
-3. Serve the folder over HTTP (not `file://`), e.g.:
+2. Serve the folder over HTTP (not `file://`), e.g.:
 
 ```bash
 python3 -m http.server 8765
