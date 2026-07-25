@@ -32,6 +32,22 @@ python3 -m http.server 8765
 
 Open `http://127.0.0.1:8765`.
 
+## Bandcamp CLI
+
+Bandcamp has no public catalog API suitable for the web app, so lookups are a local script instead. Stdlib only — no venv or packages.
+
+```bash
+python3 bandcamp_lookup.py 'https://artist.bandcamp.com/album/…'
+```
+
+or
+
+```bash
+./bandcamp_lookup.py 'https://artist.bandcamp.com/album/…'
+```
+
+Accepts album or track URLs. Progress goes to stderr; the Barcoder-style summary (UPC, ISRCs, label, etc.) goes to stdout.
+
 ## The MIT License (MIT)
 Copyright © 2026 [Wrong Wave](https://wrongwave.net)
 
