@@ -36,8 +36,6 @@ jobs:
 
           client_id = os.environ.get('CLIENT_ID') or ''
           client_secret = os.environ.get('CLIENT_SECRET') or ''
-          if not client_id or not client_secret:
-            raise SystemExit('Missing BARCODER_SPOTIFY_CLIENT_ID or BARCODER_SPOTIFY_SECRET_WEB in barcoder-prod')
 
           Path('_site/config.js').write_text(
             'window.BARCODER = {\n'

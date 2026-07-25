@@ -10,11 +10,21 @@ const copyBtn = document.getElementById('copy-btn')
 const copyDialog = document.getElementById('copy-dialog')
 const copyDialogHint = document.getElementById('copy-dialog-hint')
 const copyDialogText = document.getElementById('copy-dialog-text')
+const spotifyMention = document.getElementById('spotifyMention')
 
 const URL_PARAM = 'url'
 const canNativeShare = typeof navigator.share === 'function'
 const shareBtnLabel = canNativeShare ? 'Share' : 'Copy link'
 shareBtn.textContent = shareBtnLabel
+
+const spotifyCreds = credentials()
+const hasSpotifyCreds = Boolean(spotifyCreds.clientId && spotifyCreds.clientSecret)
+if (spotifyMention && !hasSpotifyCreds) {
+	spotifyMention.style.display = 'none'
+}
+if (!hasSpotifyCreds) {
+	input.placeholder = 'Deezer album/track URL'
+}
 
 let spotifyToken = null
 let tokenExpiry = 0
@@ -161,20 +171,14 @@ async function lookup(url) {
 	copyBtn.disabled = true
 
 	try {
-		const { clientId, clientSecret } = credentials()
-		if (!clientId || !clientSecret) {
-			throw new Error('Add Spotify clientId and clientSecret to config.js')
-		}
-
-		const parsed = parseSpotifyUrl(url)
+		const parsed = parseMusicUrl(url)
 		if (!parsed) {
-			throw new Error('Paste a Spotify album or track URL')
+			throw new Error('Paste a Spotify or Deezer album/track URL')
 		}
 
-		const token = await getToken(clientId, clientSecret)
-		const payload = parsed.type === 'album'
-			? await fetchAlbumPayload(token, parsed.id)
-			: await fetchTrackPayload(token, parsed.id)
+		const payload = parsed.provider === 'deezer'
+			? await lookupDeezer(parsed)
+			: await lookupSpotify(parsed)
 
 		lastPayload = payload
 		render(payload)
@@ -186,24 +190,61 @@ async function lookup(url) {
 	}
 }
 
-function parseSpotifyUrl(raw) {
+async function lookupSpotify(parsed) {
+	const { clientId, clientSecret } = credentials()
+	if (!clientId || !clientSecret) {
+		throw new Error('Add Spotify clientId and clientSecret to config.js')
+	}
+	const token = await getToken(clientId, clientSecret)
+	return parsed.type === 'album'
+		? await fetchSpotifyAlbumPayload(token, parsed.id)
+		: await fetchSpotifyTrackPayload(token, parsed.id)
+}
+
+async function lookupDeezer(parsed) {
+	return parsed.type === 'album'
+		? await fetchDeezerAlbumPayload(parsed.id)
+		: await fetchDeezerTrackPayload(parsed.id)
+}
+
+function parseMusicUrl(raw) {
 	const value = raw.trim()
-	const uri = value.match(/^spotify:(album|track):([A-Za-z0-9]+)$/)
-	if (uri) return { type: uri[1], id: uri[2] }
+
+	const spotifyUri = value.match(/^spotify:(album|track):([A-Za-z0-9]+)$/i)
+	if (spotifyUri) {
+		return { provider: 'spotify', type: spotifyUri[1].toLowerCase(), id: spotifyUri[2] }
+	}
 
 	try {
 		const u = new URL(value)
-		if (!u.hostname.includes('spotify.com')) return null
-		const parts = u.pathname.split('/').filter(Boolean)
-		const typeIndex = parts.findIndex((p) => p === 'album' || p === 'track')
-		if (typeIndex === -1 || !parts[typeIndex + 1]) return null
-		return {
-			type: parts[typeIndex],
-			id: parts[typeIndex + 1].split('?')[0],
+		const host = (u.hostname || '').toLowerCase()
+
+		if (host.includes('spotify.com')) {
+			const parts = u.pathname.split('/').filter(Boolean)
+			const typeIndex = parts.findIndex((p) => p === 'album' || p === 'track')
+			if (typeIndex === -1 || !parts[typeIndex + 1]) return null
+			return {
+				provider: 'spotify',
+				type: parts[typeIndex],
+				id: parts[typeIndex + 1].split('?')[0],
+			}
+		}
+
+		if (host.includes('deezer.com')) {
+			const parts = u.pathname.split('/').filter(Boolean)
+			const typeIndex = parts.findIndex((p) => p === 'album' || p === 'track')
+			if (typeIndex === -1 || !parts[typeIndex + 1]) return null
+			return {
+				provider: 'deezer',
+				type: parts[typeIndex],
+				id: parts[typeIndex + 1].split('?')[0],
+			}
 		}
 	} catch {
 		return null
 	}
+
+	return null
 }
 
 async function getToken(clientId, clientSecret) {
@@ -238,20 +279,20 @@ async function spotifyGet(token, path) {
 	return response.json()
 }
 
-async function fetchAlbumPayload(token, albumId) {
+async function fetchSpotifyAlbumPayload(token, albumId) {
 	const album = await spotifyGet(token, `/albums/${albumId}`)
-	const trackIds = await collectAlbumTrackIds(token, album)
-	const tracks = await fetchTracksByIds(token, trackIds)
-	return buildPayload(album, tracks)
+	const trackIds = await collectSpotifyAlbumTrackIds(token, album)
+	const tracks = await fetchSpotifyTracksByIds(token, trackIds)
+	return buildSpotifyPayload(album, tracks)
 }
 
-async function fetchTrackPayload(token, trackId) {
+async function fetchSpotifyTrackPayload(token, trackId) {
 	const track = await spotifyGet(token, `/tracks/${trackId}`)
 	const album = await spotifyGet(token, `/albums/${track.album.id}`)
-	return buildPayload(album, [track], { focusTrackId: track.id })
+	return buildSpotifyPayload(album, [track], { focusTrackId: track.id })
 }
 
-async function collectAlbumTrackIds(token, album) {
+async function collectSpotifyAlbumTrackIds(token, album) {
 	const ids = []
 	let next = album.tracks?.next || null
 
@@ -274,7 +315,7 @@ async function collectAlbumTrackIds(token, album) {
 	return ids
 }
 
-async function fetchTracksByIds(token, ids) {
+async function fetchSpotifyTracksByIds(token, ids) {
 	// Dev Mode (Feb 2026+): batch GET /tracks?ids=… returns 403. Fetch one-by-one.
 	const tracks = []
 	const concurrency = 6
@@ -288,7 +329,7 @@ async function fetchTracksByIds(token, ids) {
 	return tracks
 }
 
-function buildPayload(album, tracks, options = {}) {
+function buildSpotifyPayload(album, tracks, options = {}) {
 	const rows = tracks.map((track) => ({
 		number: track.track_number,
 		disc: track.disc_number,
@@ -297,24 +338,143 @@ function buildPayload(album, tracks, options = {}) {
 		isrc: track.external_ids?.isrc || '',
 		id: track.id,
 		durationMs: track.duration_ms || 0,
-		spotifyUrl: track.external_urls?.spotify || `https://open.spotify.com/track/${track.id}`,
+		url: track.external_urls?.spotify || `https://open.spotify.com/track/${track.id}`,
 	}))
 
 	return {
+		provider: 'spotify',
 		album: album.name,
 		artists: (album.artists || []).map((a) => a.name).join(', '),
 		upc: album.external_ids?.upc || '',
 		label: album.label || '',
 		releaseDate: album.release_date || '',
-		spotifyUrl: album.external_urls?.spotify || '',
+		sourceUrl: album.external_urls?.spotify || '',
 		durationMs: rows.reduce((sum, track) => sum + track.durationMs, 0),
 		tracks: rows,
 		focusTrackId: options.focusTrackId || null,
 	}
 }
 
+function deezerJsonp(pathOrUrl) {
+	return new Promise((resolve, reject) => {
+		const callback = `dzcb_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+		const script = document.createElement('script')
+		let settled = false
+
+		const cleanup = () => {
+			clearTimeout(timer)
+			try { delete window[callback] } catch {}
+			script.remove()
+		}
+
+		const finish = (fn, value) => {
+			if (settled) return
+			settled = true
+			cleanup()
+			fn(value)
+		}
+
+		const timer = setTimeout(() => {
+			finish(reject, new Error('Deezer request timed out'))
+		}, 15000)
+
+		window[callback] = (data) => {
+			if (data?.error) {
+				finish(reject, new Error(data.error.message || 'Deezer API error'))
+				return
+			}
+			finish(resolve, data)
+		}
+
+		script.onerror = () => finish(reject, new Error('Deezer request failed'))
+
+		const url = new URL(
+			/^https?:/i.test(pathOrUrl)
+				? pathOrUrl
+				: `https://api.deezer.com${pathOrUrl}`
+		)
+		url.searchParams.set('output', 'jsonp')
+		url.searchParams.set('callback', callback)
+		script.src = url.toString()
+		document.head.appendChild(script)
+	})
+}
+
+async function fetchDeezerAlbumPayload(albumId) {
+	const album = await deezerJsonp(`/album/${albumId}`)
+	if (!album?.id) throw new Error('Deezer album not found')
+	const tracks = await collectDeezerAlbumTracks(albumId)
+	return buildDeezerPayload(album, tracks)
+}
+
+async function fetchDeezerTrackPayload(trackId) {
+	const track = await deezerJsonp(`/track/${trackId}`)
+	if (!track?.id) throw new Error('Deezer track not found')
+	const albumId = track.album?.id
+	if (!albumId) throw new Error('Deezer track has no album')
+	const album = await deezerJsonp(`/album/${albumId}`)
+	return buildDeezerPayload(album, [track], { focusTrackId: String(track.id) })
+}
+
+async function collectDeezerAlbumTracks(albumId) {
+	const tracks = []
+	let next = `/album/${albumId}/tracks?limit=100`
+
+	while (next) {
+		const page = await deezerJsonp(next)
+		for (const item of page.data || []) {
+			if (item) tracks.push(item)
+		}
+		next = page.next || null
+	}
+
+	return tracks
+}
+
+function buildDeezerPayload(album, tracks, options = {}) {
+	const albumArtists = deezerArtistNames(album)
+	const rows = tracks.map((track) => ({
+		number: track.track_position || 0,
+		disc: track.disk_number || 1,
+		title: track.title || '',
+		artists: deezerTrackArtistNames(track, album, albumArtists),
+		isrc: track.isrc || '',
+		id: String(track.id),
+		durationMs: (track.duration || 0) * 1000,
+		url: track.link || `https://www.deezer.com/track/${track.id}`,
+	}))
+
+	return {
+		provider: 'deezer',
+		album: album.title || '',
+		artists: albumArtists,
+		upc: album.upc || '',
+		label: album.label || '',
+		releaseDate: album.release_date || '',
+		sourceUrl: album.link || `https://www.deezer.com/album/${album.id}`,
+		durationMs: rows.reduce((sum, track) => sum + track.durationMs, 0),
+		tracks: rows,
+		focusTrackId: options.focusTrackId || null,
+	}
+}
+
+function deezerArtistNames(entity) {
+	if (entity?.contributors?.length) {
+		return entity.contributors.map((a) => a.name).filter(Boolean).join(', ')
+	}
+	return entity?.artist?.name || ''
+}
+
+function deezerTrackArtistNames(track, album, albumArtists) {
+	if (track?.contributors?.length) return deezerArtistNames(track)
+	// Album track lists omit contributors; reuse album artists when it's a multi-artist release.
+	if (album?.contributors?.length > 1) return albumArtists
+	return deezerArtistNames(track) || albumArtists
+}
+
 function render(payload) {
 	const upc = payload.upc || '—'
+	const providerLabel = payload.provider === 'deezer' ? 'deezer' : 'spotify'
 	metaEl.innerHTML = `
 		<div><em>‘${escapeHtml(payload.album)}’</em> by ${escapeHtml(payload.artists)}</div>
 		<div>UPC: <strong>${escapeHtml(upc)}</strong></div>
@@ -323,8 +483,8 @@ function render(payload) {
 		${payload.releaseDate ? `<div>Released on ${escapeHtml(payload.releaseDate)}</div>` : ''}
 	`
 
-	if (payload.focusTrackId && payload.spotifyUrl) {
-		albumBtn.href = barcoderHref(payload.spotifyUrl)
+	if (payload.focusTrackId && payload.sourceUrl) {
+		albumBtn.href = barcoderHref(payload.sourceUrl)
 		albumBtn.hidden = false
 	} else {
 		albumBtn.hidden = true
@@ -334,10 +494,10 @@ function render(payload) {
 	const multiDisc = payload.tracks.some((t) => t.disc > 1)
 	tracksBody.innerHTML = payload.tracks.map((track) => {
 		const num = multiDisc ? `${track.disc}.${track.number}` : String(track.number)
-		const highlight = payload.focusTrackId && track.id === payload.focusTrackId
+		const highlight = payload.focusTrackId && String(track.id) === String(payload.focusTrackId)
 			? ' data-focus="true"'
 			: ''
-		const infoHref = barcoderHref(track.spotifyUrl)
+		const infoHref = barcoderHref(track.url)
 		return `
 			<tr${highlight}>
 				<td>${escapeHtml(num)}</td>
@@ -346,7 +506,7 @@ function render(payload) {
 				<td class=isrc>${escapeHtml(track.isrc || '—')}</td>
 				<td class=links>
 					<a href="${escapeHtml(infoHref)}">info</a>
-					<a href="${escapeHtml(track.spotifyUrl)}" target=_blank rel=noopener>spotify</a>
+					<a href="${escapeHtml(track.url)}" target=_blank rel=noopener>${providerLabel}</a>
 				</td>
 			</tr>
 		`
@@ -355,9 +515,9 @@ function render(payload) {
 	resultsEl.hidden = false
 }
 
-function barcoderHref(spotifyUrl) {
+function barcoderHref(musicUrl) {
 	const next = new URL(location.href)
-	next.searchParams.set(URL_PARAM, spotifyUrl)
+	next.searchParams.set(URL_PARAM, musicUrl)
 	next.hash = ''
 	return next.pathname + next.search
 }

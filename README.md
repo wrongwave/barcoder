@@ -1,14 +1,16 @@
 # Barcoder
 
-Lookup **ISRC** and **UPC** barcodes for Spotify albums and tracks.
+Lookup **ISRC** and **UPC** barcodes for Spotify and Deezer albums and tracks. Note that Spotify quotas are inhumanly tiny and it's not per app, but per developr account. Deezer requires no API key and is quite generous with quotas.
 
 **Live:** [https://barcoder.wrongwave.net](https://barcoder.wrongwave.net)
 
 Paste an album or track URL to get release metadata, a tracklist with ISRCs, and a copyable text summary. Links are shareable via `?url=`.
 
+Spotify needs credentials in `config.js`. Deezer works without a key (JSONP).
+
 ## Local setup
 
-1. Create a [Spotify Developer](https://developer.spotify.com/dashboard) app and copy the Client ID and Client Secret.
+1. [Optional] Create a [Spotify Developer](https://developer.spotify.com/dashboard) app and copy the Client ID and Client Secret — needed only if you want to support Spotify links.
 2. Copy the config example and fill in your credentials:
 
 ```bash
