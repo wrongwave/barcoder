@@ -1,0 +1,4 @@
+window.BARCODER = {
+	clientId: '',
+	clientSecret: '',
+}

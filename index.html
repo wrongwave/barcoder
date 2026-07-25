@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+	<meta charset=UTF-8>
+	<meta name=viewport content='width=device-width, initial-scale=1.0'>
+	<title>Barcoder (UPC/ISRC) | Wrong Wave</title>
+	<meta name=description content='Lookup ISRC and UPC barcodes for Spotify albums and tracks — paste a link, get release codes and a copyable tracklist'>
+	<meta name=keywords content='ISRC, UPC, barcode, Spotify, album, track, music metadata'>
+	<meta name=author content='Wrong Wave / Artyom'>
+	<meta name=theme-color content=#121212 media='(prefers-color-scheme: dark)'>
+	<meta name=theme-color content=#f6f6f6 media='(prefers-color-scheme: light)'>
+	<meta property=og:title content='Barcoder (UPC/ISRC) | Wrong Wave'>
+	<meta property=og:description content='Lookup ISRC and UPC barcodes for Spotify albums and tracks'>
+	<meta property=og:type content=website>
+	<meta name=twitter:card content=summary>
+	<meta name=twitter:title content='Barcoder (UPC/ISRC) | Wrong Wave'>
+	<meta name=twitter:description content='Lookup ISRC and UPC barcodes for Spotify albums and tracks'>
+	<link rel=icon href=favicon.svg type=image/svg+xml>
+	<link rel=stylesheet href=style.css>
+</head>
+<body>
+	<main>
+		<h1>Barcoder</h1>
+		<p>
+			Lookup ISRC and UPC barcodes for albums and tracks on Spotify.
+			Paste an Spotify album or track link, get release codes and a copyable tracklist.
+		</p>
+		<form id=lookup-form>
+			<input
+				id=url-input
+				type=text
+				inputmode=url
+				placeholder='Spotify album or track URL'
+				autocomplete=off
+				required
+			>
+			<button type=submit>Lookup</button>
+		</form>
+		<p id=status hidden></p>
+		<section id=results hidden>
+			<div class=results-header>
+				<div class=meta id=meta></div>
+				<div class=toolbar>
+					<a id=album-btn hidden>View album</a>
+					<button type=button id=share-btn>Share</button>
+					<button type=button id=copy-btn>Copy info as text</button>
+				</div>
+			</div>
+			<div class=table-wrap>
+				<table>
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>Title</th>
+							<th>Length</th>
+							<th>ISRC</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id=tracks-body></tbody>
+				</table>
+			</div>
+		</section>
+	</main>
+	<dialog id=copy-dialog>
+		<p id=copy-dialog-hint>Select and copy:</p>
+		<textarea id=copy-dialog-text readonly rows=12></textarea>
+		<form method=dialog>
+			<button type=submit>Close</button>
+		</form>
+	</dialog>
+	<footer>
+		<a href=https://wrongwave.net target=_blank>← Wrong Wave</a>
+		<span class=muted>&nbsp; ~ &nbsp;</span>
+		<a href=https://github.com/wrongwave/barcoder target=_blank rel=noopener>Code on GitHub →</a>
+	</footer>
+	<script src=config.js></script>
+	<script src=app.js></script>
+</body>
+</html>
