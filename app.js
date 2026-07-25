@@ -32,8 +32,9 @@ let lastPayload = null
 
 form.addEventListener('submit', async (event) => {
 	event.preventDefault()
-	const url = input.value.trim()
+	const url = normalizeUrl(input.value.trim())
 	if (!url) return
+	input.value = url
 	setLocationUrl(url)
 	await lookup(url)
 })
@@ -208,7 +209,7 @@ async function lookupDeezer(parsed) {
 }
 
 function parseMusicUrl(raw) {
-	const value = raw.trim()
+	const value = normalizeUrl(raw.trim())
 
 	const spotifyUri = value.match(/^spotify:(album|track):([A-Za-z0-9]+)$/i)
 	if (spotifyUri) {
@@ -245,6 +246,18 @@ function parseMusicUrl(raw) {
 	}
 
 	return null
+}
+
+function normalizeUrl(raw) {
+	const value = String(raw || '').trim()
+	if (!value) return value
+	if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) {
+		if (value.toLowerCase().startsWith('http://')) {
+			return 'https://' + value.slice(7)
+		}
+		return value
+	}
+	return 'https://' + value.replace(/^\/+/, '')
 }
 
 async function getToken(clientId, clientSecret) {
