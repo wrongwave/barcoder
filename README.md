@@ -1,6 +1,6 @@
 # Barcoder
 
-Lookup **ISRC** and **UPC** barcodes for Spotify and Deezer albums and tracks. Note that Spotify quotas are inhumanly tiny and it's not per app, but per developr account. Deezer requires no API key and is quite generous with quotas.
+Lookup **ISRC** and **UPC** barcodes for Spotify and Deezer albums and tracks. Note that Spotify quotas are inhumanly tiny and it's not per app but per developer account. Deezer requires no API key and is quite generous with quotas.
 
 **Live:** [https://barcoder.wrongwave.net](https://barcoder.wrongwave.net)
 
